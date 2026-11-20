@@ -34,8 +34,14 @@ local IsMobile = UserInputService.TouchEnabled or false
 local GuiInset = GuiService:GetGuiInset().Y
 local Mouse = cloneref(LocalPlayer:GetMouse())
 
+local LoginMetadata = ...
+
 local Library = { 
     Flags = { },
+    LicenseExpiresAt = type(LoginMetadata) == "table" and tonumber(LoginMetadata.licenseExpiresAt) or nil,
+    ServerTime = type(LoginMetadata) == "table" and tonumber(LoginMetadata.serverTime) or nil,
+    LicenseExpiresLabel = type(LoginMetadata) == "table" and LoginMetadata.licenseExpiresLabel or nil,
+    ClockStartedAt = os.clock(),
 
     MenuKeybind = tostring(Enum.KeyCode.X),
 
@@ -191,14 +197,14 @@ local Library = {
 
     local Themes = {
         ["Preset"] = {
-            ["Background"] = Color3.fromRGB(14, 16, 18),
-            ["Inline"] = Color3.fromRGB(21, 24, 27),
-            ["Tab"] = Color3.fromRGB(29, 33, 37),
-            ["Text"] = Color3.fromRGB(235, 240, 237),
-            ["Inactive Text"] = Color3.fromRGB(151, 161, 156),
-            ["Accent"] = Color3.fromRGB(52, 211, 153),
-            ["Outline"] = Color3.fromRGB(48, 55, 52),
-            ["Hovered Element"] = Color3.fromRGB(36, 44, 40),
+            ["Background"] = Color3.fromRGB(12,15,20),
+            ["Inline"] = Color3.fromRGB(19,24,31),
+            ["Tab"] = Color3.fromRGB(27,34,43),
+            ["Text"] = Color3.fromRGB(235,242,247),
+            ["Inactive Text"] = Color3.fromRGB(141,156,170),
+            ["Accent"] = Color3.fromRGB(52,211,153),
+            ["Outline"] = Color3.fromRGB(44,56,68),
+            ["Hovered Element"] = Color3.fromRGB(30,40,49),
         },
         ["Sky"] = {
             ["Background"] = Color3.fromRGB(20, 23, 24),
@@ -513,6 +519,47 @@ local Library = {
         end
 
         return setmetatable(Data, Library)
+    end
+
+    -- Native line icons: no remote image assets are needed for navigation.
+    Library.DrawIcon = function(Self, Parent, Name)
+        local paths={}
+        local function path(...) paths[#paths+1]={...} end
+        local function circle(x,y,r)
+            local points={}
+            for i=0,12 do local a=i*math.pi*2/12; points[#points+1]={x+math.cos(a)*r,y+math.sin(a)*r} end
+            paths[#paths+1]=points
+        end
+        local key=tostring(Name):lower():gsub('%s','')
+        if key=='esp' then path({1,9},{5,4},{13,4},{17,9},{13,14},{5,14},{1,9}); circle(9,9,3)
+        elseif key=='rage' or key=='aimbot' then circle(9,9,5); path({9,0},{9,5}); path({9,13},{9,18}); path({0,9},{5,9}); path({13,9},{18,9})
+        elseif key=='antiaim' then path({9,1},{16,4},{15,11},{9,17},{3,11},{2,4},{9,1}); path({6,9},{8,12},{12,6})
+        elseif key=='playerslist' then circle(6,5,3); circle(14,6,2); path({1,16},{2,12},{5,10},{8,10},{11,12},{12,16}); path({12,11},{16,12},{17,16})
+        elseif key=='world' then circle(9,9,8); path({1,9},{17,9}); path({3,4},{15,4}); path({3,14},{15,14}); path({9,1},{6,5},{6,13},{9,17},{12,13},{12,5},{9,1})
+        elseif key=='tools' then path({2,6},{16,6},{16,16},{2,16},{2,6}); path({6,6},{6,2},{12,2},{12,6}); path({2,10},{16,10}); path({8,9},{10,9},{10,12},{8,12},{8,9})
+        elseif key=='utilities' then path({13,2},{11,5},{14,8},{17,6},{16,11},{12,12},{5,17},{1,13},{7,7},{7,3},{11,1})
+        elseif key=='visuals' or key=='animations' then path({1,14},{5,4},{9,14},{13,4},{17,14}); path({1,17},{17,17})
+        elseif key=='settings' then path({2,4},{16,4}); path({2,9},{16,9}); path({2,14},{16,14}); circle(6,4,2); circle(12,9,2); circle(7,14,2)
+        else path({3,3},{15,3},{15,15},{3,15},{3,3}); path({6,7},{12,7}); path({6,11},{10,11}) end
+        Parent.Image=''; Parent.Visible=true
+        local strokes={}
+        for _,points in ipairs(paths) do for i=1,#points-1 do
+            local a,b=points[i],points[i+1]
+            local dx,dy=b[1]-a[1],b[2]-a[2]
+            local stroke=Library:Create('Frame',{
+                Parent=Parent,AnchorPoint=Vector2.new(.5,.5),
+                Position=UDim2.fromScale((a[1]+b[1])/36,(a[2]+b[2])/36),
+                Size=UDim2.new(math.sqrt(dx*dx+dy*dy)/18,0,0,1.5),
+                Rotation=math.deg(math.atan2(dy,dx)),BorderSizePixel=0,
+                BackgroundColor3=Parent.ImageColor3,
+            })
+            Library:Create('UICorner',{Parent=stroke.Instance,CornerRadius=UDim.new(1,0)})
+            strokes[#strokes+1]=stroke.Instance
+        end end
+        Library:Connect(Parent:GetPropertyChangedSignal('ImageColor3'),function()
+            for _,stroke in ipairs(strokes) do stroke.BackgroundColor3=Parent.ImageColor3 end
+        end)
+        return strokes
     end
 
     Library.Thread = function(Self, Function)
@@ -2679,224 +2726,51 @@ end
             return Keybind, Items 
         end
 
-Library.Watermark = function(Self, Params)
-            Params = Params or { }
-
-            local Watermark = { 
-                Name = Params.Name or Params.name or Self.Name or "Watermark",
-                Logo = Params.Logo or Params.logo or Self.Logo,
-
-                Window = Self,
-                Items = { }
-            }
-
-            local Items = { } do 
-                Items["Watermark"] = Library:Create("Frame", {
-                    Name = "\0",
-                    Parent = Library.Holder.Instance,
-                    AnchorPoint = Vector2.new(0.5, 1),
-                    Position = UDim2.new(0.5, 0, 1, -10),
-                    Size = UDim2.new(0, 0, 0, 45),
-                    BorderSizePixel = 0,
-                    AutomaticSize = Enum.AutomaticSize.X,
-                    BackgroundColor3 = Library.Theme["Inline"]
-                }):AddToTheme({BackgroundColor3 = 'Inline'})
-                
-                Items["Watermark"]:MakeDraggable()
-                
-                Library:Create("UICorner", {
-                    Name = "\0",
-                    Parent = Items["Watermark"].Instance
-                })
-                
-                Library:Create("UIStroke", {
-                    Name = "\0",
-                    Parent = Items["Watermark"].Instance,
-                    Color = Library.Theme["Outline"],
-                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-                }):AddToTheme({Color = 'Outline'})
-                
-                Library:Create("UIPadding", {
-                    Name = "\0",
-                    Parent = Items["Watermark"].Instance,
-                    PaddingRight = UDim.new(0, 10),
-                    PaddingLeft = UDim.new(0, 10)
-                })
-                
-                Library:Create("UIListLayout", {
-                    Name = "\0",
-                    Parent = Items["Watermark"].Instance,
-                    VerticalAlignment = Enum.VerticalAlignment.Center,
-                    FillDirection = Enum.FillDirection.Horizontal,
-                    Padding = UDim.new(0, 10),
-                    SortOrder = Enum.SortOrder.LayoutOrder
-                })
-                
-                Items["Main"] = Library:Create("Frame", {
-                    Name = "\0",
-                    Parent = Items["Watermark"].Instance,
-                    BackgroundTransparency = 1,
-                    Size = UDim2.new(0, 0, 1, 0),
-                    BorderSizePixel = 0,
-                    AutomaticSize = Enum.AutomaticSize.X
-                })
-                
-                Items["Title"] = Library:Create("TextLabel", {
-                    Name = "\0",
-                    FontFace = Library.Font,
-                    TextSize = Library.FontSize + 4,
-                    Parent = Items["Main"].Instance,
-                    TextColor3 = Library.Theme["Text"],
-                    Text = Watermark.Name,
-                    AnchorPoint = Vector2.new(0, 0.5),
-                    Position = UDim2.new(0, 38, 0.5, 0),
-                    BackgroundTransparency = 1,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    BorderSizePixel = 0,
-                    AutomaticSize = Enum.AutomaticSize.XY
-                }):AddToTheme({TextColor3 = 'Text'})
-                
-                Items["Logo"] = Library:Create("ImageLabel", {
-                    Name = "\0",
-                    Parent = Items["Main"].Instance,
-                    ImageColor3 = Library.Theme["Accent"],
-                    ScaleType = Enum.ScaleType.Fit,
-                    AnchorPoint = Vector2.new(0, 0.5),
-                    Image = Watermark.Logo,
-                    BackgroundTransparency = 1,
-                    Position = UDim2.new(0, 0, 0.5, 0),
-                    Size = UDim2.new(0, 30, 0, 30),
-                    BorderSizePixel = 0
-                }):AddToTheme({ImageColor3 = 'Accent'})
-                
-                Library:Create("Frame", {
-                    Name = "\0",
-                    Parent = Items["Watermark"].Instance,
-                    Size = UDim2.new(0, 1, 1, 0),
-                    BorderSizePixel = 0,
-                    BackgroundColor3 = Library.Theme["Outline"]
-                }):AddToTheme({BackgroundColor3 = 'Outline'})
-                
-                Items["NewHolder"] = Library:Create("Frame", {
-                    Name = "\0",
-                    Parent = Items["Watermark"].Instance,
-                    BackgroundTransparency = 1,
-                    Size = UDim2.new(0, 0, 1, 0),
-                    BorderSizePixel = 0,
-                    AutomaticSize = Enum.AutomaticSize.X
-                })
-                
-                Items["FPSText"] = Library:Create("TextLabel", {
-                    Name = "\0",
-                    FontFace = Library.Font,
-                    TextSize = Library.FontSize,
-                    Parent = Items["NewHolder"].Instance,
-                    RichText = true,
-                    TextColor3 = Library.Theme["Text"],
-                    Text = 'FPS: <font color="rgb(120, 120, 120)">0</font>',
-                    Position = UDim2.new(0, 0, 0.5, 0),
-                    AnchorPoint = Vector2.new(0, 0.5),
-                    BorderSizePixel = 0,
-                    BackgroundTransparency = 1,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    AutomaticSize = Enum.AutomaticSize.XY
-                }):AddToTheme({TextColor3 = 'Text'})
-                
-                Library:Create("UIListLayout", {
-                    Name = "\0",
-                    Parent = Items["NewHolder"].Instance,
-                    Padding = UDim.new(0, 5),
-                    SortOrder = Enum.SortOrder.LayoutOrder
-                })
-                
-                Library:Create("UIPadding", {
-                    Name = "\0",
-                    Parent = Items["NewHolder"].Instance,
-                    PaddingTop = UDim.new(0, 6)
-                })
-                
-                Items["PingText"] = Library:Create("TextLabel", {
-                    Name = "\0",
-                    FontFace = Library.Font,
-                    TextSize = Library.FontSize,
-                    Parent = Items["NewHolder"].Instance,
-                    RichText = true,
-                    TextColor3 = Library.Theme["Text"],
-                    Text = 'PING: <font color="rgb(120, 120, 120)">0MS</font>',
-                    Position = UDim2.new(0, 0, 0.5, 0),
-                    AnchorPoint = Vector2.new(0, 0.5),
-                    BorderSizePixel = 0,
-                    BackgroundTransparency = 1,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    AutomaticSize = Enum.AutomaticSize.XY
-                }):AddToTheme({TextColor3 = 'Text'})
-
-                Watermark.Items = Items
+        Library.Watermark = function(Self, Params)
+            Params=Params or {}
+            local Watermark={Name=Params.Name or Params.name or Self.Name or 'cheware',Window=Self,Items={}}
+            local Items=Watermark.Items
+            Items.Watermark=Library:Create('Frame',{
+                Parent=Library.Holder.Instance,Position=UDim2.fromOffset(18,18),
+                Size=UDim2.fromOffset(390,38),BackgroundColor3=Library.Theme.Inline,BorderSizePixel=0,
+            }):AddToTheme({BackgroundColor3='Inline'})
+            Library:Create('UICorner',{Parent=Items.Watermark.Instance,CornerRadius=UDim.new(0,9)})
+            Library:Create('UIStroke',{Parent=Items.Watermark.Instance,Color=Library.Theme.Outline,Transparency=.2}):AddToTheme({Color='Outline'})
+            local Accent=Library:Create('Frame',{Parent=Items.Watermark.Instance,Position=UDim2.fromOffset(0,9),Size=UDim2.new(0,2,1,-18),BackgroundColor3=Library.Theme.Accent,BorderSizePixel=0}):AddToTheme({BackgroundColor3='Accent'})
+            Library:Create('UICorner',{Parent=Accent.Instance,CornerRadius=UDim.new(1,0)})
+            local function text(key,value,x,width,color,size)
+                Items[key]=Library:Create('TextLabel',{
+                    Parent=Items.Watermark.Instance,Position=UDim2.fromOffset(x,0),Size=UDim2.new(0,width,1,0),
+                    Text=value,TextColor3=Library.Theme[color],TextSize=size,FontFace=Library.Font,
+                    TextXAlignment=Enum.TextXAlignment.Left,TextTruncate=Enum.TextTruncate.AtEnd,BackgroundTransparency=1,
+                }):AddToTheme({TextColor3=color})
+                Items[key].Instance.TextSize=size
             end
-
-            local GetInactiveRGB = function()
-                local Color = Library.Theme["Inactive Text"]
-                return string.format(
-                    "rgb(%d, %d, %d)",
-                    math.floor(Color.R * 255 + 0.5),
-                    math.floor(Color.G * 255 + 0.5),
-                    math.floor(Color.B * 255 + 0.5)
-                )
+            text('Logo','CS',12,26,'Accent',12)
+            text('Title',Watermark.Name,43,82,'Text',13)
+            text('Player',LocalPlayer.DisplayName,140,104,'Inactive Text',11)
+            text('FPSText','-- FPS',260,58,'Text',11)
+            text('PingText','-- ms',327,53,'Accent',11)
+            for _,x in ipairs({130,250,318}) do
+                Library:Create('Frame',{Parent=Items.Watermark.Instance,Position=UDim2.fromOffset(x,12),Size=UDim2.fromOffset(1,14),BackgroundColor3=Library.Theme.Outline,BorderSizePixel=0}):AddToTheme({BackgroundColor3='Outline'})
             end
-
-            local GetPing = function()
-                local Ok, Value = pcall(function()
-                    return math.floor(LocalPlayer:GetNetworkPing() * 1000)
-                end)
-
-                if Ok and Value then
-                    return Value
-                end
-
-                Ok, Value = pcall(function()
-                    return math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
-                end)
-
-                return (Ok and Value) or 0
-            end
-
-            local FrameCount = 0
-            local LastUpdate = os.clock()
-
-            Library:Connect(RunService.RenderStepped, function()
-                FrameCount += 1
-
-                local Now = os.clock()
-                if Now - LastUpdate < 1 then
-                    return
-                end
-
-                local FPS = FrameCount
-                FrameCount = 0
-                LastUpdate = Now
-
-                local Color = GetInactiveRGB()
-                Items["FPSText"].Instance.Text = string.format('FPS: <font color="%s">%d</font>', Color, FPS)
-                Items["PingText"].Instance.Text = string.format('PING: <font color="%s">%ms</font>', Color, GetPing())
+            Items.Watermark:MakeDraggable()
+            local frames,elapsed=0,0
+            Library:Connect(RunService.RenderStepped,function(dt)
+                if dt<=0 then return end
+                frames+=1; elapsed+=dt
+                if elapsed<.75 then return end
+                local fps=math.floor(frames/elapsed+.5)
+                frames=0; elapsed=0
+                local ok,ping=pcall(function() return math.floor(LocalPlayer:GetNetworkPing()*1000+.5) end)
+                Items.FPSText.Instance.Text=string.format('%d FPS',fps)
+                Items.PingText.Instance.Text=ok and string.format('%d ms',ping) or '-- ms'
             end)
-
-            function Watermark:Center()
-                Items["Watermark"]:ConvertAnchor()
-            end
-
-            function Watermark:SetVisibility(Bool)
-                Items["Watermark"].Instance.Visible = Bool
-            end
-
-            function Watermark:SetText(Text)
-                Watermark.Name = tostring(Text)
-                Items["Title"].Instance.Text = Watermark.Name
-            end
-
-            Watermark:Center()
-            Self.Watermark = Watermark
-
-            return setmetatable(Watermark, Library)
+            function Watermark:Center() Items.Watermark:ConvertAnchor() end
+            function Watermark:SetVisibility(value) Items.Watermark.Instance.Visible=value end
+            function Watermark:SetText(value) self.Name=tostring(value); Items.Title.Instance.Text=self.Name end
+            Self.Watermark=Watermark
+            return setmetatable(Watermark,Library)
         end
 
         Library.KeybindList = function(Self, Params)
@@ -3646,12 +3520,12 @@ Library.Watermark = function(Self, Params)
                     Parent = Library.Holder.Instance,
                     AnchorPoint = Vector2.new(0.5, 0.5),
                     Position = UDim2.new(0.5, 0, 0.5, 0),
-                    Size = Params.Size or UDim2.fromOffset(680, 590),
+                    Size = Params.Size or UDim2.fromOffset(820, 620),
                     BorderSizePixel = 0,
                     BackgroundColor3 = Library.Theme["Background"]
                 }):AddToTheme({BackgroundColor3 = 'Background'})
                 
-                Items["MainFrame"]:MakeResizeable(Vector2.new(560, 420))
+                Items["MainFrame"]:MakeResizeable(Vector2.new(720, 480))
                 
                 Library:Create("UICorner", {
                     Name = "\0",
@@ -3695,6 +3569,29 @@ Library.Watermark = function(Self, Params)
                     BackgroundColor3 = Library.Theme["Text"]
                 }):AddToTheme({ImageColor3 = 'Accent'})
                 
+                if type(Params.LogoText) == "string" and Params.LogoText ~= "" then
+                    Items["Logo"].Instance.Visible = false
+                    Items["LogoMark"] = Library:Create("Frame", {
+                        Parent = Items["Top"].Instance,
+                        Position = UDim2.new(0, 16, 0.5, -18),
+                        Size = UDim2.fromOffset(36, 36),
+                        BackgroundColor3 = Library.Theme.Tab,
+                        BorderSizePixel = 0,
+                    }):AddToTheme({BackgroundColor3 = "Tab"})
+                    Library:Create("UICorner", {Parent = Items["LogoMark"].Instance, CornerRadius = UDim.new(0, 8)})
+                    Library:Create("UIStroke", {Parent = Items["LogoMark"].Instance, Color = Library.Theme.Accent, Transparency = 0.35}):AddToTheme({Color = "Accent"})
+                    Items["LogoText"] = Library:Create("TextLabel", {
+                        Parent = Items["LogoMark"].Instance,
+                        Size = UDim2.fromScale(1, 1),
+                        Text = Params.LogoText,
+                        TextSize = 16,
+                        FontFace = Library.Font,
+                        TextColor3 = Library.Theme.Accent,
+                        BackgroundTransparency = 1,
+                    }):AddToTheme({TextColor3 = "Accent"})
+                    Items["LogoText"].Instance.TextSize = 16
+                end
+
                 Items["Title"] = Library:Create("TextLabel", {
                     Name = "\0",
                     FontFace = Library.Font,
@@ -3728,44 +3625,190 @@ Library.Watermark = function(Self, Params)
                 Items["MainFrame"]:MakeDraggable(Items["Top"])
                 Items["Title"].Instance.TextSize = Library.FontSize + 5
                 Items["SubTitle"].Instance.TextSize = Library.FontSize - 2
+                if Window.SubName == "" then
+                    Items["SubTitle"].Instance.Visible = false
+                    Items["Title"].Instance.Position = UDim2.fromOffset(62, 18)
+                end
+                -- Current Brasilia time is distinct from the license expiry.
+                Items["Title"].Instance.Position = UDim2.fromOffset(62, 10)
+                Items["CurrentClock"] = Library:Create("TextLabel", {
+                    Parent = Items["Top"].Instance,
+                    Position = UDim2.fromOffset(62, 38),
+                    Size = UDim2.new(1, -330, 0, 14),
+                    Text = "Brasilia: sincronizando...",
+                    FontFace = Library.Font,
+                    TextSize = 10,
+                    TextColor3 = Library.Theme["Inactive Text"],
+                    BackgroundTransparency = 1,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                }):AddToTheme({TextColor3 = "Inactive Text"})
+                Items["CurrentClock"].Instance.TextSize = 10
+                if Window.SubName ~= "" then Items["CurrentClock"].Instance.Visible = false end
+                local function UpdateCurrentClock()
+                    local Now = Library.ServerTime and (Library.ServerTime + os.clock() - Library.ClockStartedAt) or os.time()
+                    local OK, Text = pcall(os.date, "!%d/%m/%Y %H:%M", math.floor(Now) - 3 * 3600)
+                    if OK then Items["CurrentClock"].Instance.Text = "Brasilia: " .. Text end
+                end
+                UpdateCurrentClock()
+                local ClockElapsed = 0
+                Library:Connect(RunService.Heartbeat, function(DeltaTime)
+                    ClockElapsed += DeltaTime
+                    if ClockElapsed >= 1 then ClockElapsed = 0; UpdateCurrentClock() end
+                end)
+                -- Profile expiry is supplied by the validated login response.
+                -- Never infer a license lifetime from the short-lived download ticket.
+                if Params.ShowProfile ~= false then
+                    for _, Key in {"Title", "SubTitle"} do
+                        local Text = Items[Key].Instance
+                        Text.AutomaticSize = Enum.AutomaticSize.None
+                        Text.TextTruncate = Enum.TextTruncate.AtEnd
+                        Text.Size = UDim2.new(1, -330, 0, Key == "Title" and 24 or 16)
+                    end
+                    Items["Profile"] = Library:Create("Frame", {
+                        Parent = Items["Top"].Instance,
+                        AnchorPoint = Vector2.new(1, 0),
+                        Position = UDim2.new(1, -14, 0, 3),
+                        Size = UDim2.fromOffset(240, 54),
+                        BackgroundTransparency = 1,
+                    })
+                    Items["ProfileAvatar"] = Library:Create("ImageLabel", {
+                        Parent = Items["Profile"].Instance,
+                        Position = UDim2.fromOffset(0, 7),
+                        Size = UDim2.fromOffset(40, 40),
+                        Image = "rbxthumb://type=AvatarHeadShot&id=" .. tostring(LocalPlayer.UserId) .. "&w=150&h=150",
+                        BackgroundColor3 = Library.Theme.Tab,
+                        BorderSizePixel = 0,
+                    }):AddToTheme({BackgroundColor3 = "Tab"})
+                    Library:Create("UICorner", {
+                        Parent = Items["ProfileAvatar"].Instance,
+                        CornerRadius = UDim.new(1, 0),
+                    })
+                    Library:Create("UIStroke", {
+                        Parent = Items["ProfileAvatar"].Instance,
+                        Color = Library.Theme.Accent,
+                        Transparency = 0.4,
+                        Thickness = 1,
+                    }):AddToTheme({Color = "Accent"})
+                    Items["ProfileName"] = Library:Create("TextLabel", {
+                        Parent = Items["Profile"].Instance,
+                        Position = UDim2.fromOffset(51, 3),
+                        Size = UDim2.fromOffset(189, 19),
+                        Text = LocalPlayer.DisplayName,
+                        TextSize = 13,
+                        FontFace = Library.Font,
+                        TextColor3 = Library.Theme.Text,
+                        BackgroundTransparency = 1,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        TextTruncate = Enum.TextTruncate.AtEnd,
+                    }):AddToTheme({TextColor3 = "Text"})
+                    Items["ProfileExpiry"] = Library:Create("TextLabel", {
+                        Parent = Items["Profile"].Instance,
+                        Position = UDim2.fromOffset(51, 23),
+                        Size = UDim2.fromOffset(189, 15),
+                        Text = "Expire in: sign in again",
+                        TextSize = 11,
+                        FontFace = Library.Font,
+                        TextColor3 = Library.Theme.Accent,
+                        BackgroundTransparency = 1,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        TextTruncate = Enum.TextTruncate.AtEnd,
+                    }):AddToTheme({TextColor3 = "Accent"})
+                    Items["ProfileExpiryDate"] = Library:Create("TextLabel", {
+                        Parent = Items["Profile"].Instance,
+                        Position = UDim2.fromOffset(51, 40),
+                        Size = UDim2.fromOffset(189, 12),
+                        Text = "",
+                        TextSize = 9,
+                        FontFace = Library.Font,
+                        TextColor3 = Library.Theme["Inactive Text"],
+                        BackgroundTransparency = 1,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        TextTruncate = Enum.TextTruncate.AtEnd,
+                    }):AddToTheme({TextColor3 = "Inactive Text"})
+                    -- Create() may apply font defaults; apply the compact sizes explicitly.
+                    Items["ProfileName"].Instance.TextSize = 13
+                    Items["ProfileExpiry"].Instance.TextSize = 11
+                    Items["ProfileExpiryDate"].Instance.TextSize = 9
+                    local Expires = tonumber(Params.LicenseExpiresAt) or tonumber(Library.LicenseExpiresAt)
+                    if Expires and Expires == Expires and Expires > 0 and Expires < 253402300800 then
+                        Expires = math.floor(Expires)
+                        local DateOK, DateText = pcall(os.date, "!%d/%m/%Y %H:%M (Brasilia)", Expires - 3 * 3600)
+                        local ServerLabel = Library.LicenseExpiresLabel
+                        if type(ServerLabel) == "string" and #ServerLabel <= 100 then
+                            Items["ProfileExpiryDate"].Instance.Text = "Vence: " .. ServerLabel
+                        elseif DateOK then Items["ProfileExpiryDate"].Instance.Text = "Vence: " .. DateText end
+                        local function UpdateExpiry()
+                            local CurrentTime = Library.ServerTime and (Library.ServerTime + os.clock() - Library.ClockStartedAt) or os.time()
+                            local Remaining = math.max(0, math.floor(Expires - CurrentTime))
+                            local Text
+                            if Remaining == 0 then Text = "Expire in: expired"
+                            elseif Remaining >= 86400 then
+                                Text = string.format("Expire in: %dd %02dh %02dm", math.floor(Remaining / 86400), math.floor(Remaining / 3600) % 24, math.floor(Remaining / 60) % 60)
+                            else
+                                Text = string.format("Expire in: %02dh %02dm %02ds", math.floor(Remaining / 3600), math.floor(Remaining / 60) % 60, Remaining % 60)
+                            end
+                            if Items["ProfileExpiry"].Instance.Text ~= Text then Items["ProfileExpiry"].Instance.Text = Text end
+                        end
+                        UpdateExpiry()
+                        local Elapsed = 0
+                        Library:Connect(RunService.Heartbeat, function(DeltaTime)
+                            Elapsed += DeltaTime
+                            if Elapsed >= 1 then Elapsed = 0; UpdateExpiry() end
+                        end)
+                    end
+                end
                 Items["Pages"] = Library:Create("ScrollingFrame", {
                     Name = "\0",
                     Parent = Items["MainFrame"].Instance,
-                    Position = UDim2.fromOffset(16, 68),
-                    Size = UDim2.new(1, -32, 0, 44),
+                    Position = UDim2.fromOffset(16, 106),
+                    Size = UDim2.new(0, 166, 1, -122),
                     BackgroundTransparency = 1,
                     BorderSizePixel = 0,
                     Active = true,
                     CanvasSize = UDim2.new(),
-                    AutomaticCanvasSize = Enum.AutomaticSize.X,
-                    ScrollingDirection = Enum.ScrollingDirection.X,
-                    ScrollBarThickness = 2,
+                    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                    ScrollingDirection = Enum.ScrollingDirection.Y,
+                    ScrollBarThickness = 3,
                     ScrollBarImageColor3 = Library.Theme.Accent,
                     ScrollBarImageTransparency = 0.5,
                     ClipsDescendants = true,
                 }):AddToTheme({ScrollBarImageColor3 = "Accent"})
                 Library:Create("UIListLayout", {
                     Parent = Items["Pages"].Instance,
-                    FillDirection = Enum.FillDirection.Horizontal,
-                    VerticalAlignment = Enum.VerticalAlignment.Center,
-                    Padding = UDim.new(0, 7),
+                    FillDirection = Enum.FillDirection.Vertical,
+                    VerticalAlignment = Enum.VerticalAlignment.Top,
+                    HorizontalAlignment = Enum.HorizontalAlignment.Center,
+                    Padding = UDim.new(0, 5),
                     SortOrder = Enum.SortOrder.LayoutOrder,
                 })
                 Library:Create("Frame", {
                     Parent = Items["MainFrame"].Instance,
-                    Position = UDim2.fromOffset(16, 118),
+                    Position = UDim2.fromOffset(16, 69),
                     Size = UDim2.new(1, -32, 0, 1),
                     BorderSizePixel = 0,
                     BackgroundColor3 = Library.Theme.Outline,
                     BackgroundTransparency = 0.35,
                 }):AddToTheme({BackgroundColor3 = "Outline"})
 
+                Library:Create("TextLabel", {
+                    Parent = Items["MainFrame"].Instance,
+                    Position = UDim2.fromOffset(28, 80), Size = UDim2.fromOffset(154, 16),
+                    Text = "WORKSPACE", TextSize = 10, FontFace = Library.Font,
+                    TextColor3 = Library.Theme["Inactive Text"], BackgroundTransparency = 1,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                }):AddToTheme({TextColor3 = "Inactive Text"})
+                Library:Create("Frame", {
+                    Parent = Items["MainFrame"].Instance,Position = UDim2.fromOffset(188,80),
+                    Size = UDim2.new(0,1,1,-96),BackgroundColor3 = Library.Theme.Outline,
+                    BackgroundTransparency = .5,BorderSizePixel = 0,
+                }):AddToTheme({BackgroundColor3 = "Outline"})
                 Items["Content"] = Library:Create("Frame", {
                     Name = "\0",
                     Parent = Items["MainFrame"].Instance,
                     BackgroundTransparency = 1,
-                    Position = UDim2.new(0, 4, 0, 124),
-                    Size = UDim2.new(1, -8, 1, -130),
+                    Position = UDim2.new(0, 194, 0, 80),
+                    Size = UDim2.new(1, -208, 1, -94),
                     BorderSizePixel = 0,
                     BackgroundColor3 = Library.Theme["Text"]
                 }):AddToTheme({BackgroundColor3 = 'Text'})                
@@ -3830,7 +3873,7 @@ Library.Watermark = function(Self, Params)
                     Parent = Page.Window.Items["Pages"].Instance,
                     Text = "",
                     AutoButtonColor = false,
-                    Size = UDim2.fromOffset(120, 36),
+                    Size = UDim2.fromOffset(158, 40),
                     BackgroundTransparency = 0.75,
                     BackgroundColor3 = Library.Theme.Tab,
                     BorderSizePixel = 0,
@@ -3853,13 +3896,14 @@ Library.Watermark = function(Self, Params)
                     Parent = Items["Inactive"].Instance,
                     Image = Page.Icon,
                     Visible = Page.Icon ~= "",
-                    Size = UDim2.fromOffset(17, 17),
+                    Size = UDim2.fromOffset(19, 19),
                     AnchorPoint = Vector2.new(0, 0.5),
                     Position = UDim2.new(0, 12, 0.5, 0),
                     BackgroundTransparency = 1,
                     ImageColor3 = Library.Theme["Inactive Text"],
                 }):AddToTheme({ImageColor3 = "Inactive Text"})
-                local TextInset = Page.Icon ~= "" and 39 or 12
+                local TextInset = 41
+                Library:DrawIcon(Items["Icon"].Instance, Params.IconName or Page.Name)
                 Items["TabMeasure"] = Library:Create("TextLabel", {
                     Parent = Items["Inactive"].Instance,
                     Text = Page.Name,
@@ -3884,9 +3928,9 @@ Library.Watermark = function(Self, Params)
                 }):AddToTheme({TextColor3 = "Inactive Text"})
                 Items["TabAccent"] = Library:Create("Frame", {
                     Parent = Items["Inactive"].Instance,
-                    AnchorPoint = Vector2.new(0.5, 1),
-                    Position = UDim2.new(0.5, 0, 1, 0),
-                    Size = UDim2.new(0, 0, 0, 2),
+                    AnchorPoint = Vector2.new(0, .5),
+                    Position = UDim2.new(0, 0, .5, 0),
+                    Size = UDim2.new(0, 2, 0, 0),
                     BackgroundTransparency = 1,
                     BackgroundColor3 = Library.Theme.Accent,
                     BorderSizePixel = 0,
@@ -3975,11 +4019,7 @@ Library.Watermark = function(Self, Params)
             end
 
             local function UpdateTabSize()
-                local TextWidth = Items["TabMeasure"].Instance.TextBounds.X
-                if TextWidth <= 0 then TextWidth = #Page.Name * Library.FontSize * 0.6 end
-                local Inset = Page.Icon ~= "" and 51 or 24
-                local Width = math.clamp(math.ceil(TextWidth + Inset), 96, 220)
-                Items["Inactive"].Instance.Size = UDim2.fromOffset(Width, 36)
+                Items["Inactive"].Instance.Size=UDim2.fromOffset(158,40)
             end
             Library:Connect(Items["TabMeasure"].Instance:GetPropertyChangedSignal("TextBounds"), UpdateTabSize)
             UpdateTabSize()
@@ -4010,7 +4050,7 @@ Library.Watermark = function(Self, Params)
                     Old.Items["Icon"]:Tween({ImageColor3 = Library.Theme["Inactive Text"]})
                     Old.Items["Text"]:Tween({TextColor3 = Library.Theme["Inactive Text"]})
                     Old.Items["TabStroke"]:Tween({Color = Library.Theme.Outline, Transparency = 0.7})
-                    Old.Items["TabAccent"]:Tween({Size = UDim2.fromOffset(0, 2), BackgroundTransparency = 1})
+                    Old.Items["TabAccent"]:Tween({Size = UDim2.fromOffset(2, 0), BackgroundTransparency = 1})
                     Old.Items["Page"]:FadeDescendants(false, function()
                         if Page.Window.Current ~= Old then
                             Old.Items["Page"].Instance.Parent = Library.UnusedHolder.Instance
@@ -4027,20 +4067,19 @@ Library.Watermark = function(Self, Params)
                 Items["Icon"]:Tween({ImageColor3 = Library.Theme.Accent})
                 Items["Text"]:Tween({TextColor3 = Library.Theme.Text})
                 Items["TabStroke"]:Tween({Color = Library.Theme.Accent, Transparency = 0.45})
-                Items["TabAccent"]:Tween({Size = UDim2.new(1, -24, 0, 2), BackgroundTransparency = 0})
+                Items["TabAccent"]:Tween({Size = UDim2.fromOffset(2, 20), BackgroundTransparency = 0})
                 -- Bring the selected tab into view when the navigation overflows.
                 task.defer(function()
                     if Library.Exited or Page.Window.Current ~= Page then return end
                     local Holder = Page.Window.Items["Pages"].Instance
                     local Tab = Items["Inactive"].Instance
                     local Scale = math.max(Library:GetScreenScale(), 0.001)
-                    local Left = (Tab.AbsolutePosition.X - Holder.AbsolutePosition.X) / Scale + Holder.CanvasPosition.X
-                    local Width = Holder.AbsoluteSize.X / Scale
-                    local Right = Left + Tab.AbsoluteSize.X / Scale
-                    local X = Holder.CanvasPosition.X
-                    if Left < X then X = Left elseif Right > X + Width then X = Right - Width end
-                    local MaxX = math.max(0, Holder.AbsoluteCanvasSize.X - Width)
-                    Page.Window.Items["Pages"]:Tween({CanvasPosition = Vector2.new(math.clamp(X, 0, MaxX), 0)})
+                    local Top=(Tab.LayoutOrder-1)*45
+                    local Height=Holder.AbsoluteSize.Y/Scale
+                    local Y=Holder.CanvasPosition.Y
+                    if Top<Y then Y=Top elseif Top+40>Y+Height then Y=Top+40-Height end
+                    local MaxY=math.max(0,#Page.Window.Pages*45-5-Height)
+                    Page.Window.Items["Pages"]:Tween({CanvasPosition=Vector2.new(0,math.clamp(Y,0,MaxY))})
                 end)
             end
             Items["Inactive"]:Connect("Activated", function() Page:Turn() end)
@@ -4196,7 +4235,7 @@ end
                     Text = "",
                     AutoButtonColor = false,
                     BackgroundTransparency = 1,
-                    Size = UDim2.new(1, 0, 0, 18),
+                    Size = UDim2.new(1, 0, 0, 30),
                     BorderSizePixel = 0
                 })
                 
@@ -4208,7 +4247,7 @@ end
                     TextColor3 = Library.Theme["Inactive Text"],
                     Text = Toggle.Name,
                     AnchorPoint = Vector2.new(0, 0.5),
-                    Position = UDim2.new(0, 0, 0.5, 0),
+                    Position = UDim2.new(0, 34, 0.5, 0),
                     BackgroundTransparency = 1,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     BorderSizePixel = 0,
@@ -4218,9 +4257,9 @@ end
                 Items["IndicatorOutline"] = Library:Create("Frame", {
                     Name = "\0",
                     Parent = Items["Toggle"].Instance,
-                    AnchorPoint = Vector2.new(1, 0),
-                    Position = UDim2.new(1, 0, 0, 0),
-                    Size = UDim2.new(0, 18, 0, 18),
+                    AnchorPoint = Vector2.new(0, .5),
+                    Position = UDim2.new(0, 1, .5, 0),
+                    Size = UDim2.fromOffset(20, 20),
                     BorderSizePixel = 0,
                     BackgroundColor3 = Library.Theme["Outline"]
                 }):AddToTheme({BackgroundColor3 = 'Outline'})
@@ -4228,17 +4267,17 @@ end
                 Library:Create("UICorner", {
                     Name = "\0",
                     Parent = Items["IndicatorOutline"].Instance,
-                    TopLeftRadius = UDim.new(0, 4),
-                    TopRightRadius = UDim.new(0, 4),
-                    BottomRightRadius = UDim.new(0, 4),
-                    BottomLeftRadius = UDim.new(0, 4)
+                    TopLeftRadius = UDim.new(0, 5),
+                    TopRightRadius = UDim.new(0, 5),
+                    BottomRightRadius = UDim.new(0, 5),
+                    BottomLeftRadius = UDim.new(0, 5)
                 })
                 
                 Items["Indicator"] = Library:Create("Frame", {
                     Name = "\0",
                     Parent = Items["IndicatorOutline"].Instance,
-                    Position = UDim2.new(0, 1, 0, 1),
-                    Size = UDim2.new(1, -2, 1, -2),
+                    Position = UDim2.fromOffset(2,2),
+                    Size = UDim2.new(1,-4,1,-4),
                     BorderSizePixel = 0,
                     BackgroundColor3 = Library.Theme["Background"]
                 }):AddToTheme({BackgroundColor3 = 'Background'})
@@ -4246,10 +4285,10 @@ end
                 Library:Create("UICorner", {
                     Name = "\0",
                     Parent = Items["Indicator"].Instance,
-                    TopLeftRadius = UDim.new(0, 4),
-                    TopRightRadius = UDim.new(0, 4),
-                    BottomRightRadius = UDim.new(0, 4),
-                    BottomLeftRadius = UDim.new(0, 4)
+                    TopLeftRadius = UDim.new(0, 5),
+                    TopRightRadius = UDim.new(0, 5),
+                    BottomRightRadius = UDim.new(0, 5),
+                    BottomLeftRadius = UDim.new(0, 5)
                 })
                 
                 Items["Inline"] = Library:Create("Frame", {
@@ -4263,25 +4302,18 @@ end
                 Library:Create("UICorner", {
                     Name = "\0",
                     Parent = Items["Inline"].Instance,
-                    TopLeftRadius = UDim.new(0, 4),
-                    TopRightRadius = UDim.new(0, 4),
-                    BottomRightRadius = UDim.new(0, 4),
-                    BottomLeftRadius = UDim.new(0, 4)
+                    TopLeftRadius = UDim.new(0, 5),
+                    TopRightRadius = UDim.new(0, 5),
+                    BottomRightRadius = UDim.new(0, 5),
+                    BottomLeftRadius = UDim.new(0, 5)
                 })
                 
-                Items["Check"] = Library:Create("ImageLabel", {
-                    Name = "\0",
-                    Parent = Items["Indicator"].Instance,
-                    ImageColor3 = Color3.fromRGB(0, 0, 0),
-                    ImageTransparency = 1,
-                    AnchorPoint = Vector2.new(0.5, 0.5),
-                    Image = "rbxassetid://133055463536692",
-                    BackgroundTransparency = 1,
-                    Position = UDim2.new(0.5, 0, 0.5, 0),
-                    Size = UDim2.new(0, 12, 0, 12),
-                    BorderSizePixel = 0
+                Items["Check"] = Library:Create("TextLabel", {
+                    Parent=Items["Indicator"].Instance,Text="✓",Font=Enum.Font.GothamBold,TextSize=14,
+                    TextColor3=Color3.fromRGB(9,27,19),TextTransparency=1,
+                    AnchorPoint=Vector2.new(.5,.5),Position=UDim2.fromScale(.5,.5),
+                    Size=UDim2.fromOffset(14,14),BackgroundTransparency=1,
                 })
-                
                 Library:Create("UIGradient", {
                     Name = "\0",
                     Parent = Items["Inline"].Instance,
@@ -4297,7 +4329,7 @@ end
                     Parent = Items["Toggle"].Instance,
                     AnchorPoint = Vector2.new(1, 0),
                     BackgroundTransparency = 1,
-                    Position = UDim2.new(1, -26, 0, 0),
+                    Position = UDim2.new(1, 0, 0, 0),
                     Size = UDim2.new(0, 0, 1, 0),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X
@@ -4315,6 +4347,14 @@ end
                 Toggle.Items = Items
             end
 
+            Items["Text"].Instance.AutomaticSize=Enum.AutomaticSize.None
+            Items["Text"].Instance.TextTruncate=Enum.TextTruncate.AtEnd
+            Items["Text"].Instance.TextSize=13
+            local function UpdateLabelSpace()
+                Items["Text"].Instance.Size=UDim2.new(1,-(42+Items["SubElements"].Instance.AbsoluteSize.X),1,0)
+            end
+            Library:Connect(Items["SubElements"].Instance:GetPropertyChangedSignal("AbsoluteSize"),UpdateLabelSpace)
+            UpdateLabelSpace()
             Items["Toggle"]:OnHover(function()
                 if Toggle.Value then return end 
                 Items["Indicator"]:Tween({BackgroundColor3 = Library.Theme["Hovered Element"]})
@@ -4324,20 +4364,21 @@ end
             end)
 
             function Toggle:Set(Bool)
-                Toggle.Value = Bool 
-
+                Toggle.Value = Bool
+                Items["IndicatorOutline"]:ChangeItemTheme({BackgroundColor3=Bool and "Accent" or "Outline"})
+                Items["IndicatorOutline"]:Tween({BackgroundColor3=Bool and Library.Theme.Accent or Library.Theme.Outline})
                 if Bool then 
                     Items["Text"]:ChangeItemTheme({TextColor3 = "Text"})
                     Items["Text"]:Tween({TextColor3 = Library.Theme.Text})
 
                     Items["Inline"]:Tween({Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 0})
-                    Items["Check"]:Tween({ImageTransparency = 0})
+                    Items["Check"]:Tween({TextTransparency = 0})
                 else
                     Items["Text"]:ChangeItemTheme({TextColor3 = "Inactive Text"})
                     Items["Text"]:Tween({TextColor3 = Library.Theme["Inactive Text"]})
 
                     Items["Inline"]:Tween({Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1})
-                    Items["Check"]:Tween({ImageTransparency = 1})
+                    Items["Check"]:Tween({TextTransparency = 1})
                 end
 
                 Flags[Toggle.Flag] = Bool
@@ -4624,10 +4665,10 @@ end
                 Library:Create("UICorner", {
                     Name = "\0",
                     Parent = Items["RealSliderOutline"].Instance,
-                    TopLeftRadius = UDim.new(0, 2),
-                    TopRightRadius = UDim.new(0, 2),
-                    BottomRightRadius = UDim.new(0, 2),
-                    BottomLeftRadius = UDim.new(0, 2)
+                    TopLeftRadius = UDim.new(0, 4),
+                    TopRightRadius = UDim.new(0, 4),
+                    BottomRightRadius = UDim.new(0, 4),
+                    BottomLeftRadius = UDim.new(0, 4)
                 })
                 
                 Items["RealSlider"] = Library:Create("TextButton", {
@@ -4685,7 +4726,7 @@ end
                     AnchorPoint = Vector2.new(0.5, 0.5),
                     Position = UDim2.new(0.5, 0, 0.5, 0),
                     BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-                    Size = UDim2.new(0, 12, 0, 12),
+                    Size = UDim2.new(0, 14, 0, 14),
                     BorderSizePixel = 0
                 })
                 
@@ -4732,7 +4773,7 @@ end
                     TextSize = Library.FontSize,
                     Parent = Items["Slider"].Instance,
                     TextColor3 = Library.Theme["Inactive Text"],
-                    Text = "%90 gay",
+                    Text = "0",
                     AnchorPoint = Vector2.new(1, 0),
                     Position = UDim2.new(1, 0, 0, 0),
                     BackgroundTransparency = 1,
@@ -4800,7 +4841,7 @@ end
                 Slider:AnimateValue(Slider.Value)
 
                 local Percent = math.clamp((Slider.Value - Slider.Min) / math.max(Slider.Max - Slider.Min, 1e-9), 0, 1)      
-                Items["DraggerOutline"]:Tween({Position = UDim2.new(Percent, (12 / 2) - (Percent * 12), 0.5, 0)}, TweenInfo.new(Library.Animation.Time, Enum.EasingStyle.Quart, Enum.EasingDirection.Out))
+                Items["DraggerOutline"]:Tween({Position = UDim2.new(Percent, (14 / 2) - (Percent * 14), 0.5, 0)}, TweenInfo.new(Library.Animation.Time, Enum.EasingStyle.Quart, Enum.EasingDirection.Out))
 
                 if Slider.Value == Slider.Min then 
                     Items["Accent"]:Tween({BackgroundTransparency = 1})
@@ -6601,7 +6642,7 @@ end
                     end
                 })
 
-                if Self.Watermark then
+                if type(Self.Watermark) == "table" and Self.Watermark.SetVisibility then
                     MenuSection:Toggle({
                         Name = "Watermark",
                         Flag = "Watermark",
@@ -6612,7 +6653,7 @@ end
                     })
                 end
 
-                if Self.KeybindList then
+                if type(Self.KeybindList) == "table" and Self.KeybindList.SetVisibility then
                     MenuSection:Toggle({
                         Name = "Keybind List",
                         Flag = "KeybindList",
@@ -6623,7 +6664,7 @@ end
                     })
                 end
 
-                if Self.ESPPreview then
+                if type(Self.ESPPreview) == "table" and Self.ESPPreview.SetVisibility then
                     MenuSection:Toggle({
                         Name = "ESP Preview",
                         Flag = "ESPPreview",
