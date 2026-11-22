@@ -441,10 +441,7 @@ local Library = {
 
             return Success and Result or Font.fromEnum(Enum.Font.Code)
         end
-        Library.Font = CustomFont:New("Figtree", 400, "Regular", {
-            Id = "Figtree",
-            Url = "https://github.com/NIcoGabrielRealYtr/luas/raw/refs/heads/main/fonts/Figtree-SemiBold.ttf"
-        })
+        Library.Font = Font.fromEnum(Enum.Font.Code)
     end
 
     -- Idempotent cleanup: active drags, slider animations and tweens are owned here.
@@ -2754,7 +2751,7 @@ end
             local Items=Watermark.Items
             Items.Watermark=Library:Create('Frame',{
                 Parent=Library.Holder.Instance,Position=UDim2.fromOffset(18,18),
-            Size=UDim2.fromOffset(390,23),BackgroundColor3=Library.Theme.Inline,BorderSizePixel=0,
+            Size=UDim2.fromOffset(480,23),BackgroundColor3=Library.Theme.Inline,BorderSizePixel=0,
             }):AddToTheme({BackgroundColor3='Inline'})
             Library:Create('UICorner',{Parent=Items.Watermark.Instance,CornerRadius=UDim.new(0,2)})
             Library:Create('UIStroke',{Parent=Items.Watermark.Instance,Color=Library.Theme.Outline,Transparency=.2}):AddToTheme({Color='Outline'})
@@ -2768,12 +2765,13 @@ end
                 }):AddToTheme({TextColor3=color})
                 Items[key].Instance.TextSize=size
             end
-            text('Logo','CS',12,26,'Accent',12)
-            text('Title',Watermark.Name,43,82,'Text',13)
-            text('Player',LocalPlayer.DisplayName,140,104,'Inactive Text',11)
-            text('FPSText','-- FPS',260,58,'Text',11)
-            text('PingText','-- ms',327,53,'Accent',11)
-            for _,x in ipairs({130,250,318}) do
+            text('Title',Watermark.Name,8,73,'Text',11)
+            text('Player',LocalPlayer.DisplayName,90,82,'Inactive Text',10)
+            text('FPSText','-- FPS',181,53,'Text',10)
+            text('PingText','-- ms',242,48,'Text',10)
+            text('Clock','--:--:--',300,82,'Inactive Text',10)
+            text('Date','--/--/----',390,80,'Inactive Text',10)
+            for _,x in ipairs({82,173,235,292,382}) do
                 Library:Create('Frame',{Parent=Items.Watermark.Instance,Position=UDim2.fromOffset(x,5),Size=UDim2.fromOffset(1,13),BackgroundColor3=Library.Theme.Outline,BorderSizePixel=0}):AddToTheme({BackgroundColor3='Outline'})
             end
             Items.Watermark:MakeDraggable()
@@ -2787,6 +2785,11 @@ end
                 local ok,ping=pcall(function() return math.floor(LocalPlayer:GetNetworkPing()*1000+.5) end)
                 Items.FPSText.Instance.Text=string.format('%d FPS',fps)
                 Items.PingText.Instance.Text=ok and string.format('%d ms',ping) or '-- ms'
+                local now=Library.ServerTime and (Library.ServerTime+os.clock()-Library.ClockStartedAt) or os.time()
+                local clockOK,clockText=pcall(os.date,'!%H:%M:%S',math.floor(now)-3*3600)
+                if clockOK then Items.Clock.Instance.Text=clockText end
+                local dateOK,dateText=pcall(os.date,'!%d/%m/%Y',math.floor(now)-3*3600)
+                if dateOK then Items.Date.Instance.Text=dateText end
             end)
             function Watermark:Center() Items.Watermark:ConvertAnchor() end
             function Watermark:SetVisibility(value) Items.Watermark.Instance.Visible=value end
@@ -2823,6 +2826,12 @@ end
                     BorderSizePixel = 0,
                     BackgroundColor3 = Library.Theme["Tab"]
                 }):AddToTheme({BackgroundColor3 = 'Tab'})
+                Library:Create("Frame", {
+                    Parent = Items["Top"].Instance,
+                    Size = UDim2.new(1, 0, 0, 2),
+                    BackgroundColor3 = Library.Theme.Accent,
+                    BorderSizePixel = 0,
+                }):AddToTheme({BackgroundColor3 = "Accent"})
                 
                 Library:Create("UICorner", {
                     Name = "\0",
@@ -2841,9 +2850,9 @@ end
                     AnchorPoint = Vector2.new(0, 0.5),
                     Position = UDim2.new(0, 12, 0.5, 0),
                     BackgroundTransparency = 1,
-                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextXAlignment = Enum.TextXAlignment.Center,
                     BorderSizePixel = 0,
-                    AutomaticSize = Enum.AutomaticSize.XY
+                    Size = UDim2.new(1, -24, 0, 18)
                 }):AddToTheme({TextColor3 = 'Text'})
                 
                 Library:Create("UIStroke", {
@@ -3552,7 +3561,7 @@ end
                 Library:Create("UICorner", {
                     Name = "\0",
                     Parent = Items["MainFrame"].Instance,
-                    CornerRadius = UDim.new(0, 12)
+                    CornerRadius = UDim.new(0, 2)
                 })
                 
                 Library:Create("UIStroke", {
@@ -3565,7 +3574,7 @@ end
                 Items["Top"] = Library:Create("Frame", {
                     Name = "\0",
                     Parent = Items["MainFrame"].Instance,
-                    Size = UDim2.new(1, 0, 0, 60),
+                    Size = UDim2.new(1, 0, 0, 24),
                     BorderSizePixel = 0,
                     BackgroundColor3 = Library.Theme["Inline"]
                 }):AddToTheme({BackgroundColor3 = 'Inline'})
@@ -3785,33 +3794,41 @@ end
                         end)
                     end
                 end
+                Items["Logo"].Instance.Visible = false
+                if Items["LogoMark"] then Items["LogoMark"].Instance.Visible = false end
+                Items["SubTitle"].Instance.Visible = false
+                Items["CurrentClock"].Instance.Visible = false
+                if Items["Profile"] then Items["Profile"].Instance.Visible = false end
+                Items["Title"].Instance.Position = UDim2.fromOffset(8, 3)
+                Items["Title"].Instance.Size = UDim2.new(1, -16, 0, 18)
+                Items["Title"].Instance.TextSize = 12
                 Items["Pages"] = Library:Create("ScrollingFrame", {
                     Name = "\0",
                     Parent = Items["MainFrame"].Instance,
-                    Position = UDim2.fromOffset(16, 106),
-                    Size = UDim2.new(0, 166, 1, -122),
+                    Position = UDim2.fromOffset(8, 29),
+                    Size = UDim2.new(1, -24, 0, 32),
                     BackgroundTransparency = 1,
                     BorderSizePixel = 0,
                     Active = true,
                     CanvasSize = UDim2.new(),
-                    AutomaticCanvasSize = Enum.AutomaticSize.Y,
-                    ScrollingDirection = Enum.ScrollingDirection.Y,
-                    ScrollBarThickness = 3,
+                    AutomaticCanvasSize = Enum.AutomaticSize.X,
+                    ScrollingDirection = Enum.ScrollingDirection.X,
+                    ScrollBarThickness = 2,
                     ScrollBarImageColor3 = Library.Theme.Accent,
                     ScrollBarImageTransparency = 0.5,
                     ClipsDescendants = true,
                 }):AddToTheme({ScrollBarImageColor3 = "Accent"})
                 Library:Create("UIListLayout", {
                     Parent = Items["Pages"].Instance,
-                    FillDirection = Enum.FillDirection.Vertical,
-                    VerticalAlignment = Enum.VerticalAlignment.Top,
-                    HorizontalAlignment = Enum.HorizontalAlignment.Center,
-                    Padding = UDim.new(0, 5),
+                    FillDirection = Enum.FillDirection.Horizontal,
+                    VerticalAlignment = Enum.VerticalAlignment.Center,
+                    HorizontalAlignment = Enum.HorizontalAlignment.Left,
+                    Padding = UDim.new(0, 2),
                     SortOrder = Enum.SortOrder.LayoutOrder,
                 })
                 Library:Create("Frame", {
                     Parent = Items["MainFrame"].Instance,
-                    Position = UDim2.fromOffset(16, 69),
+                    Position = UDim2.fromOffset(8, 25),
                     Size = UDim2.new(1, -32, 0, 1),
                     BorderSizePixel = 0,
                     BackgroundColor3 = Library.Theme.Outline,
@@ -3819,14 +3836,14 @@ end
                 }):AddToTheme({BackgroundColor3 = "Outline"})
 
                 Library:Create("TextLabel", {
-                    Parent = Items["MainFrame"].Instance,
+                    Parent = Items["MainFrame"].Instance, Visible = false,
                     Position = UDim2.fromOffset(28, 80), Size = UDim2.fromOffset(154, 16),
                     Text = "WORKSPACE", TextSize = 10, FontFace = Library.Font,
                     TextColor3 = Library.Theme["Inactive Text"], BackgroundTransparency = 1,
                     TextXAlignment = Enum.TextXAlignment.Left,
                 }):AddToTheme({TextColor3 = "Inactive Text"})
                 Library:Create("Frame", {
-                    Parent = Items["MainFrame"].Instance,Position = UDim2.fromOffset(188,80),
+                    Parent = Items["MainFrame"].Instance,Visible = false,Position = UDim2.fromOffset(188,80),
                     Size = UDim2.new(0,1,1,-96),BackgroundColor3 = Library.Theme.Outline,
                     BackgroundTransparency = .5,BorderSizePixel = 0,
                 }):AddToTheme({BackgroundColor3 = "Outline"})
@@ -3834,8 +3851,8 @@ end
                     Name = "\0",
                     Parent = Items["MainFrame"].Instance,
                     BackgroundTransparency = 1,
-                    Position = UDim2.new(0, 194, 0, 80),
-                    Size = UDim2.new(1, -208, 1, -94),
+                    Position = UDim2.new(0, 8, 0, 64),
+                    Size = UDim2.new(1, -16, 1, -72),
                     BorderSizePixel = 0,
                     BackgroundColor3 = Library.Theme["Text"]
                 }):AddToTheme({BackgroundColor3 = 'Text'})                
@@ -3921,7 +3938,7 @@ end
                     Parent = Page.Window.Items["Pages"].Instance,
                     Text = "",
                     AutoButtonColor = false,
-                    Size = UDim2.fromOffset(158, 40),
+                    Size = UDim2.fromOffset(114, 28),
                     BackgroundTransparency = 0.75,
                     BackgroundColor3 = Library.Theme.Tab,
                     BorderSizePixel = 0,
@@ -3931,7 +3948,7 @@ end
                 }):AddToTheme({BackgroundColor3 = "Tab"})
                 Library:Create("UICorner", {
                     Parent = Items["Inactive"].Instance,
-                    CornerRadius = UDim.new(0, 7),
+                    CornerRadius = UDim.new(0, 2),
                 })
                 Items["TabStroke"] = Library:Create("UIStroke", {
                     Parent = Items["Inactive"].Instance,
@@ -3943,15 +3960,14 @@ end
                 Items["Icon"] = Library:Create("ImageLabel", {
                     Parent = Items["Inactive"].Instance,
                     Image = Page.Icon,
-                    Visible = Page.Icon ~= "",
+                    Visible = false,
                     Size = UDim2.fromOffset(19, 19),
                     AnchorPoint = Vector2.new(0, 0.5),
                     Position = UDim2.new(0, 12, 0.5, 0),
                     BackgroundTransparency = 1,
                     ImageColor3 = Library.Theme["Inactive Text"],
                 }):AddToTheme({ImageColor3 = "Inactive Text"})
-                local TextInset = 41
-                Library:DrawIcon(Items["Icon"].Instance, Params.IconName or Page.Name)
+                local TextInset = 4
                 Items["TabMeasure"] = Library:Create("TextLabel", {
                     Parent = Items["Inactive"].Instance,
                     Text = Page.Name,
@@ -3968,10 +3984,10 @@ end
                     TextSize = Library.FontSize,
                     FontFace = Library.Font,
                     TextColor3 = Library.Theme["Inactive Text"],
-                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextXAlignment = Enum.TextXAlignment.Center,
                     TextTruncate = Enum.TextTruncate.AtEnd,
                     Position = UDim2.fromOffset(TextInset, 0),
-                    Size = UDim2.new(1, -TextInset - 12, 1, 0),
+                    Size = UDim2.new(1, -TextInset * 2, 1, 0),
                     BackgroundTransparency = 1,
                 }):AddToTheme({TextColor3 = "Inactive Text"})
                 Items["TabAccent"] = Library:Create("Frame", {
@@ -4067,7 +4083,7 @@ end
             end
 
             local function UpdateTabSize()
-                Items["Inactive"].Instance.Size=UDim2.fromOffset(158,40)
+                Items["Inactive"].Instance.Size=UDim2.fromOffset(114,28)
             end
             Library:Connect(Items["TabMeasure"].Instance:GetPropertyChangedSignal("TextBounds"), UpdateTabSize)
             UpdateTabSize()
@@ -4122,12 +4138,12 @@ end
                     local Holder = Page.Window.Items["Pages"].Instance
                     local Tab = Items["Inactive"].Instance
                     local Scale = math.max(Library:GetScreenScale(), 0.001)
-                    local Top=(Tab.LayoutOrder-1)*45
-                    local Height=Holder.AbsoluteSize.Y/Scale
-                    local Y=Holder.CanvasPosition.Y
-                    if Top<Y then Y=Top elseif Top+40>Y+Height then Y=Top+40-Height end
-                    local MaxY=math.max(0,#Page.Window.Pages*45-5-Height)
-                    Page.Window.Items["Pages"]:Tween({CanvasPosition=Vector2.new(0,math.clamp(Y,0,MaxY))})
+                    local Left=(Tab.LayoutOrder-1)*116
+                    local Width=Holder.AbsoluteSize.X/Scale
+                    local X=Holder.CanvasPosition.X
+                    if Left<X then X=Left elseif Left+114>X+Width then X=Left+114-Width end
+                    local MaxX=math.max(0,#Page.Window.Pages*116-2-Width)
+                    Page.Window.Items["Pages"]:Tween({CanvasPosition=Vector2.new(math.clamp(X,0,MaxX),0)})
                 end)
             end
             Items["Inactive"]:Connect("Activated", function() Page:Turn() end)
