@@ -197,14 +197,14 @@ local Library = {
 
     local Themes = {
         ["Preset"] = {
-            ["Background"] = Color3.fromRGB(12,15,20),
-            ["Inline"] = Color3.fromRGB(19,24,31),
-            ["Tab"] = Color3.fromRGB(27,34,43),
+            ["Background"] = Color3.fromRGB(12,12,13),
+            ["Inline"] = Color3.fromRGB(19,19,21),
+            ["Tab"] = Color3.fromRGB(24,24,27),
             ["Text"] = Color3.fromRGB(235,242,247),
             ["Inactive Text"] = Color3.fromRGB(141,156,170),
             ["Accent"] = Color3.fromRGB(52,211,153),
-            ["Outline"] = Color3.fromRGB(44,56,68),
-            ["Hovered Element"] = Color3.fromRGB(30,40,49),
+            ["Outline"] = Color3.fromRGB(53,53,57),
+            ["Hovered Element"] = Color3.fromRGB(35,35,39),
         },
         ["Sky"] = {
             ["Background"] = Color3.fromRGB(20, 23, 24),
@@ -521,45 +521,67 @@ local Library = {
         return setmetatable(Data, Library)
     end
 
-    -- Native line icons: no remote image assets are needed for navigation.
+    -- Lucide Roblox assets: https://github.com/latte-soft/lucide-roblox
+    --[==[
+# MIT License
+
+Copyright (c) 2023 Latte Softworks <https://latte.to>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+# Lucide License (ISC)
+
+Lucide Icons (this package's icon sources) are licensed under ISC License. You can view it online directly at <https://lucide.dev/license>.
+
+## ISC License
+
+Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022.
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+    ]==]
+    Library.LucideAssets = {
+        ["eye"] = {Id=16898613353, Offset=Vector2.new(771,563), Size=Vector2.new(48,48)},
+        ["crosshair"] = {Id=16898613044, Offset=Vector2.new(453,869), Size=Vector2.new(48,48)},
+        ["shield"] = {Id=16898613777, Offset=Vector2.new(869,0), Size=Vector2.new(48,48)},
+        ["users"] = {Id=16898613869, Offset=Vector2.new(967,98), Size=Vector2.new(48,48)},
+        ["globe"] = {Id=16898613509, Offset=Vector2.new(771,563), Size=Vector2.new(48,48)},
+        ["wrench"] = {Id=16898613869, Offset=Vector2.new(820,906), Size=Vector2.new(48,48)},
+        ["briefcase"] = {Id=16898612819, Offset=Vector2.new(771,453), Size=Vector2.new(48,48)},
+        ["sliders-horizontal"] = {Id=16898613777, Offset=Vector2.new(820,355), Size=Vector2.new(48,48)},
+        ["sparkles"] = {Id=16898613777, Offset=Vector2.new(918,49), Size=Vector2.new(48,48)},
+        ["layout-dashboard"] = {Id=16898613509, Offset=Vector2.new(967,355), Size=Vector2.new(48,48)},
+    }
     Library.DrawIcon = function(Self, Parent, Name)
-        local paths={}
-        local function path(...) paths[#paths+1]={...} end
-        local function circle(x,y,r)
-            local points={}
-            for i=0,12 do local a=i*math.pi*2/12; points[#points+1]={x+math.cos(a)*r,y+math.sin(a)*r} end
-            paths[#paths+1]=points
-        end
+        local aliases={esp='eye',rage='crosshair',aimbot='crosshair',antiaim='shield',
+            playerslist='users',world='globe',tools='briefcase',utilities='wrench',
+            visuals='sparkles',animations='sparkles',settings='sliders-horizontal'}
         local key=tostring(Name):lower():gsub('%s','')
-        if key=='esp' then path({1,9},{5,4},{13,4},{17,9},{13,14},{5,14},{1,9}); circle(9,9,3)
-        elseif key=='rage' or key=='aimbot' then circle(9,9,5); path({9,0},{9,5}); path({9,13},{9,18}); path({0,9},{5,9}); path({13,9},{18,9})
-        elseif key=='antiaim' then path({9,1},{16,4},{15,11},{9,17},{3,11},{2,4},{9,1}); path({6,9},{8,12},{12,6})
-        elseif key=='playerslist' then circle(6,5,3); circle(14,6,2); path({1,16},{2,12},{5,10},{8,10},{11,12},{12,16}); path({12,11},{16,12},{17,16})
-        elseif key=='world' then circle(9,9,8); path({1,9},{17,9}); path({3,4},{15,4}); path({3,14},{15,14}); path({9,1},{6,5},{6,13},{9,17},{12,13},{12,5},{9,1})
-        elseif key=='tools' then path({2,6},{16,6},{16,16},{2,16},{2,6}); path({6,6},{6,2},{12,2},{12,6}); path({2,10},{16,10}); path({8,9},{10,9},{10,12},{8,12},{8,9})
-        elseif key=='utilities' then path({13,2},{11,5},{14,8},{17,6},{16,11},{12,12},{5,17},{1,13},{7,7},{7,3},{11,1})
-        elseif key=='visuals' or key=='animations' then path({1,14},{5,4},{9,14},{13,4},{17,14}); path({1,17},{17,17})
-        elseif key=='settings' then path({2,4},{16,4}); path({2,9},{16,9}); path({2,14},{16,14}); circle(6,4,2); circle(12,9,2); circle(7,14,2)
-        else path({3,3},{15,3},{15,15},{3,15},{3,3}); path({6,7},{12,7}); path({6,11},{10,11}) end
-        Parent.Image=''; Parent.Visible=true
-        local strokes={}
-        for _,points in ipairs(paths) do for i=1,#points-1 do
-            local a,b=points[i],points[i+1]
-            local dx,dy=b[1]-a[1],b[2]-a[2]
-            local stroke=Library:Create('Frame',{
-                Parent=Parent,AnchorPoint=Vector2.new(.5,.5),
-                Position=UDim2.fromScale((a[1]+b[1])/36,(a[2]+b[2])/36),
-                Size=UDim2.new(math.sqrt(dx*dx+dy*dy)/18,0,0,1.5),
-                Rotation=math.deg(math.atan2(dy,dx)),BorderSizePixel=0,
-                BackgroundColor3=Parent.ImageColor3,
-            })
-            Library:Create('UICorner',{Parent=stroke.Instance,CornerRadius=UDim.new(1,0)})
-            strokes[#strokes+1]=stroke.Instance
-        end end
-        Library:Connect(Parent:GetPropertyChangedSignal('ImageColor3'),function()
-            for _,stroke in ipairs(strokes) do stroke.BackgroundColor3=Parent.ImageColor3 end
-        end)
-        return strokes
+        local asset=Library.LucideAssets[aliases[key] or key] or Library.LucideAssets['layout-dashboard']
+        Parent.Image='rbxassetid://'..tostring(asset.Id)
+        Parent.ImageRectOffset=asset.Offset
+        Parent.ImageRectSize=asset.Size
+        Parent.ScaleType=Enum.ScaleType.Fit
+        Parent.Visible=true
+        return asset
     end
 
     Library.Thread = function(Self, Function)
@@ -2732,11 +2754,11 @@ end
             local Items=Watermark.Items
             Items.Watermark=Library:Create('Frame',{
                 Parent=Library.Holder.Instance,Position=UDim2.fromOffset(18,18),
-                Size=UDim2.fromOffset(390,38),BackgroundColor3=Library.Theme.Inline,BorderSizePixel=0,
+            Size=UDim2.fromOffset(390,23),BackgroundColor3=Library.Theme.Inline,BorderSizePixel=0,
             }):AddToTheme({BackgroundColor3='Inline'})
-            Library:Create('UICorner',{Parent=Items.Watermark.Instance,CornerRadius=UDim.new(0,9)})
+            Library:Create('UICorner',{Parent=Items.Watermark.Instance,CornerRadius=UDim.new(0,2)})
             Library:Create('UIStroke',{Parent=Items.Watermark.Instance,Color=Library.Theme.Outline,Transparency=.2}):AddToTheme({Color='Outline'})
-            local Accent=Library:Create('Frame',{Parent=Items.Watermark.Instance,Position=UDim2.fromOffset(0,9),Size=UDim2.new(0,2,1,-18),BackgroundColor3=Library.Theme.Accent,BorderSizePixel=0}):AddToTheme({BackgroundColor3='Accent'})
+            local Accent=Library:Create('Frame',{Parent=Items.Watermark.Instance,Position=UDim2.fromOffset(0,0),Size=UDim2.new(1,0,0,2),BackgroundColor3=Library.Theme.Accent,BorderSizePixel=0}):AddToTheme({BackgroundColor3='Accent'})
             Library:Create('UICorner',{Parent=Accent.Instance,CornerRadius=UDim.new(1,0)})
             local function text(key,value,x,width,color,size)
                 Items[key]=Library:Create('TextLabel',{
@@ -2752,7 +2774,7 @@ end
             text('FPSText','-- FPS',260,58,'Text',11)
             text('PingText','-- ms',327,53,'Accent',11)
             for _,x in ipairs({130,250,318}) do
-                Library:Create('Frame',{Parent=Items.Watermark.Instance,Position=UDim2.fromOffset(x,12),Size=UDim2.fromOffset(1,14),BackgroundColor3=Library.Theme.Outline,BorderSizePixel=0}):AddToTheme({BackgroundColor3='Outline'})
+                Library:Create('Frame',{Parent=Items.Watermark.Instance,Position=UDim2.fromOffset(x,5),Size=UDim2.fromOffset(1,13),BackgroundColor3=Library.Theme.Outline,BorderSizePixel=0}):AddToTheme({BackgroundColor3='Outline'})
             end
             Items.Watermark:MakeDraggable()
             local frames,elapsed=0,0
@@ -2797,7 +2819,7 @@ end
                 Items["Top"] = Library:Create("Frame", {
                     Name = "\0",
                     Parent = Items["KeybindList"].Instance,
-                    Size = UDim2.new(0, 220, 0, 35),
+                    Size = UDim2.new(0, 180, 0, 23),
                     BorderSizePixel = 0,
                     BackgroundColor3 = Library.Theme["Tab"]
                 }):AddToTheme({BackgroundColor3 = 'Tab'})
@@ -2835,7 +2857,7 @@ end
                     Name = "\0",
                     Parent = Items["KeybindList"].Instance,
                     Size = UDim2.new(1, 0, 0, 0),
-                    Position = UDim2.new(0, 0, 0, 35),
+                    Position = UDim2.new(0, 0, 0, 23),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.Y,
                     BackgroundColor3 = Library.Theme["Inline"]
@@ -3739,6 +3761,11 @@ end
                             Items["ProfileExpiryDate"].Instance.Text = "Vence: " .. ServerLabel
                         elseif DateOK then Items["ProfileExpiryDate"].Instance.Text = "Vence: " .. DateText end
                         local function UpdateExpiry()
+                            Expires=tonumber(Library.LicenseExpiresAt) or Expires
+                            local LatestLabel=Library.LicenseExpiresLabel
+                            if type(LatestLabel)=="string" and #LatestLabel<=100 then
+                                Items["ProfileExpiryDate"].Instance.Text="Vence: "..LatestLabel
+                            end
                             local CurrentTime = Library.ServerTime and (Library.ServerTime + os.clock() - Library.ClockStartedAt) or os.time()
                             local Remaining = math.max(0, math.floor(Expires - CurrentTime))
                             local Text
@@ -3849,6 +3876,27 @@ end
                 end
             end)
 
+            if type(LoginMetadata)=="table" and type(LoginMetadata.refreshLicense)=="function" then
+                task.spawn(function()
+                    local elapsed=0
+                    while not Library.Exited do
+                        task.wait(1)
+                        if Library.Exited then break end
+                        elapsed+=1
+                        if elapsed>=60 then
+                            elapsed=0
+                            local ok,fresh=pcall(LoginMetadata.refreshLicense)
+                            if Library.Exited then break end
+                            if ok and type(fresh)=="table" then
+                                Library.LicenseExpiresAt=fresh.licenseExpiresAt
+                                Library.LicenseExpiresLabel=fresh.licenseExpiresLabel
+                                Library.ServerTime=fresh.serverTime
+                                Library.ClockStartedAt=os.clock()
+                            end
+                        end
+                    end
+                end)
+            end
             Window:Center()
             return setmetatable(Window, Library)
         end
